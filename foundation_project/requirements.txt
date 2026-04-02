@@ -1,0 +1,10 @@
+torch
+torchvision
+transformers>=4.53.0
+accelerate
+pillow
+opencv-python
+matplotlib
+numpy
+huggingface_hub
+safetensors

@@ -7,9 +7,10 @@ import config
 from pipeline.manager import free
 
 
-def make_cover(cover_prompt: str, out_path: str) -> str:
+def make_cover(cover_prompt: str, out_path: str, steps: int | None = None) -> str:
     from diffusers import AutoPipelineForText2Image
 
+    steps = steps or config.SD_STEPS
     os.makedirs(os.path.dirname(out_path) or ".", exist_ok=True)
     prompt = (cover_prompt or "abstract album cover art, vivid colors") + \
         ", album cover, highly detailed, artistic"
@@ -26,7 +27,7 @@ def make_cover(cover_prompt: str, out_path: str) -> str:
 
     image = pipe(
         prompt=prompt,
-        num_inference_steps=config.SD_STEPS,
+        num_inference_steps=steps,
         guidance_scale=config.SD_GUIDANCE,
         height=config.SD_SIZE,
         width=config.SD_SIZE,

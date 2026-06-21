@@ -16,7 +16,7 @@ import uuid
 
 import soundfile as sf
 import uvicorn
-from fastapi import FastAPI, UploadFile
+from fastapi import FastAPI, Form, UploadFile
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -38,13 +38,30 @@ def index() -> FileResponse:
     return FileResponse(os.path.join(WEB_DIR, "index.html"))
 
 
+@app.get("/defaults")
+def defaults() -> dict:
+    """Slider defaults, sourced from config so the UI stays in sync."""
+    return {
+        "duration": config.ACE_DURATION_S,
+        "infer_step": config.ACE_INFER_STEP,
+        "sd_steps": config.SD_STEPS,
+        "seed": config.ACE_SEED,
+    }
+
+
 def _audio_duration(path: str) -> float:
     info = sf.info(path)
     return round(info.frames / info.samplerate, 1)
 
 
 @app.post("/generate")
-def generate(image: UploadFile) -> StreamingResponse:
+def generate(
+    image: UploadFile,
+    duration: int = Form(config.ACE_DURATION_S),
+    infer_step: int = Form(config.ACE_INFER_STEP),
+    sd_steps: int = Form(config.SD_STEPS),
+    seed: int = Form(config.ACE_SEED),
+) -> StreamingResponse:
     session = uuid.uuid4().hex[:8]
     session_dir = os.path.join(OUT_DIR, session)
     os.makedirs(session_dir, exist_ok=True)
@@ -56,7 +73,10 @@ def generate(image: UploadFile) -> StreamingResponse:
     def emit():
         logs: list[str] = []
         try:
-            for stage in stream_song(img_path, session_dir, log=logs.append):
+            for stage in stream_song(
+                img_path, session_dir, duration=duration, infer_step=infer_step,
+                sd_steps=sd_steps, seed=seed, log=logs.append,
+            ):
                 payload: dict = {"kind": stage.kind, "note": stage.note}
                 if stage.song is not None:
                     payload["song"] = dataclasses.asdict(stage.song)

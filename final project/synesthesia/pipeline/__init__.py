@@ -26,7 +26,16 @@ class Stage:
     note: str = ""
 
 
-def stream_song(image_path: str, out_dir: str, log=print) -> Iterator[Stage]:
+def stream_song(
+    image_path: str,
+    out_dir: str,
+    *,
+    duration: int | None = None,
+    infer_step: int | None = None,
+    sd_steps: int | None = None,
+    seed: int | None = None,
+    log=print,
+) -> Iterator[Stage]:
     """Run the pipeline, yielding a Stage after each model finishes."""
     os.makedirs(out_dir, exist_ok=True)
     log(f"[0/3] start  {vram_summary()}")
@@ -38,13 +47,14 @@ def stream_song(image_path: str, out_dir: str, log=print) -> Iterator[Stage]:
 
     log("[2/3] ACE-Step: singing the song...")
     song_wav = os.path.join(out_dir, "song.wav")
-    singer.sing(song.tags, song.lyrics, song_wav)
+    singer.sing(song.tags, song.lyrics, song_wav, duration=duration,
+                infer_step=infer_step, seed=seed)
     log(f"      saved {song_wav}  {vram_summary()}")
     yield Stage(kind="song", song=song, audio_path=song_wav, note=vram_summary())
 
     log("[3/3] Stable Diffusion: painting the album cover...")
     cover_png = os.path.join(out_dir, "cover.png")
-    cover.make_cover(song.cover_prompt, cover_png)
+    cover.make_cover(song.cover_prompt, cover_png, steps=sd_steps)
     log(f"      saved {cover_png}  {vram_summary()}")
     yield Stage(kind="cover", song=song, image_path=cover_png, note=vram_summary())
 

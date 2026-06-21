@@ -45,6 +45,13 @@
     box-shadow:0 6px 16px #6a4cff33;
   }
   .btn:disabled{opacity:.45;cursor:not-allowed;box-shadow:none}
+  .settings{display:grid;grid-template-columns:1fr 1fr;gap:10px 22px;margin-top:16px}
+  .settings label{display:flex;flex-direction:column;gap:5px;font-size:13px;color:var(--muted)}
+  .settings label b{color:var(--txt)}
+  .settings input[type=range]{width:100%;accent-color:var(--accent)}
+  .settings .seed{flex-direction:row;align-items:center;gap:8px}
+  .settings .seed input{width:90px;padding:5px 8px;border:1px solid var(--line);border-radius:8px}
+  #estimate{font-size:12.5px}
 
   .stage{
     display:flex;gap:14px;align-items:flex-start;border:1px solid var(--line);
@@ -102,8 +109,19 @@
       <img id="preview" style="display:none" />
     </div>
     <input id="file" type="file" accept="image/*" hidden />
+    <div class="settings">
+      <label>Song length <b><span id="durVal">90</span>s</b>
+        <input type="range" id="dur" min="20" max="180" step="5" value="90"></label>
+      <label>Singing quality (steps) <b><span id="stepVal">27</span></b>
+        <input type="range" id="step" min="10" max="60" step="1" value="27"></label>
+      <label>Cover quality (steps) <b><span id="sdVal">3</span></b>
+        <input type="range" id="sd" min="1" max="8" step="1" value="3"></label>
+      <label class="seed">Seed
+        <input type="number" id="seed" value="42" min="0" max="999999"></label>
+    </div>
     <div class="controls">
       <button id="go" class="btn" disabled>Generate Song</button>
+      <span class="hint" id="estimate"></span>
     </div>
   </div>
 
@@ -193,6 +211,10 @@ async function generate(){
 
   const fd = new FormData();
   fd.append("image", pickedFile);
+  fd.append("duration", $("dur").value);
+  fd.append("infer_step", $("step").value);
+  fd.append("sd_steps", $("sd").value);
+  fd.append("seed", $("seed").value || "42");
 
   let resp;
   try { resp = await fetch("/generate", { method:"POST", body:fd }); }
@@ -239,6 +261,24 @@ function handleEvent(ev){
     setBadge("cover","done");
   }
 }
+
+// --- settings sliders ---
+const sliders = [["dur","durVal"],["step","stepVal"],["sd","sdVal"]];
+function syncLabels(){ sliders.forEach(([s,v]) => $(v).textContent = $(s).value); updateEstimate(); }
+sliders.forEach(([s]) => $(s).addEventListener("input", syncLabels));
+function updateEstimate(){
+  // rough: model load + diffusion roughly proportional to song length
+  const secs = Math.round(20 + Number($("dur").value) * 0.9 + Number($("step").value) * 0.3);
+  $("estimate").textContent = `~${secs}s to generate`;
+}
+// load defaults from the server (single source of truth = config.py)
+fetch("/defaults").then(r => r.json()).then(d => {
+  if(d.duration) $("dur").value = d.duration;
+  if(d.infer_step) $("step").value = d.infer_step;
+  if(d.sd_steps) $("sd").value = d.sd_steps;
+  if(d.seed !== undefined) $("seed").value = d.seed;
+  syncLabels();
+}).catch(syncLabels);
 
 $("go").onclick = generate;
 </script>

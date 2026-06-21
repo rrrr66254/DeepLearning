@@ -73,7 +73,9 @@ python server.py         # opens http://localhost:8000
 ```
 
 The page shows, in order: Qwen2.5-VL's lyrics + tags, ACE-Step's sung song
-(playable + downloadable), and Stable Diffusion's album cover.
+(playable + downloadable), and Stable Diffusion's album cover. Sliders let you
+set the song length, singing/cover quality (diffusion steps), and the seed before
+generating; their defaults come from `config.py`.
 
 Command line:
 

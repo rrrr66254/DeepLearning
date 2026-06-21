@@ -29,8 +29,17 @@ def _ace_launcher() -> list[str]:
     return [conda, "run", "--no-capture-output", "-n", config.ACE_ENV_NAME, "python"]
 
 
-def sing(tags: str, lyrics: str, out_path: str, duration: int | None = None) -> str:
+def sing(
+    tags: str,
+    lyrics: str,
+    out_path: str,
+    duration: int | None = None,
+    infer_step: int | None = None,
+    seed: int | None = None,
+) -> str:
     duration = duration or config.ACE_DURATION_S
+    infer_step = infer_step or config.ACE_INFER_STEP
+    seed = config.ACE_SEED if seed is None else seed
     os.makedirs(os.path.dirname(out_path) or ".", exist_ok=True)
 
     fd, lyrics_file = tempfile.mkstemp(suffix=".txt")
@@ -44,8 +53,8 @@ def sing(tags: str, lyrics: str, out_path: str, duration: int | None = None) -> 
         "--lyrics-file", lyrics_file,
         "--out", out_path,
         "--duration", str(duration),
-        "--infer-step", str(config.ACE_INFER_STEP),
-        "--seed", str(config.ACE_SEED),
+        "--infer-step", str(infer_step),
+        "--seed", str(seed),
         "--cpu-offload", "1" if config.ACE_CPU_OFFLOAD else "0",
     ]
     env = os.environ.copy()

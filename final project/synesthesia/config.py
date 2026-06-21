@@ -41,7 +41,9 @@ VLM_TEMPERATURE = 0.7
 ACE_ENV_NAME = os.environ.get("ACE_ENV_NAME", "ace")
 ACE_ENV_PYTHON = os.environ.get("ACE_ENV_PYTHON", "")
 ACE_SINGER_SCRIPT = os.path.join(HERE, "ace_singer.py")
-ACE_DURATION_S = 25
+# Long enough to sing the full lyrics (two verses + a chorus). Too short cuts
+# the song off mid-lyrics; raise this if your lyrics are longer.
+ACE_DURATION_S = 90
 ACE_INFER_STEP = 27
 ACE_SEED = 42
 # False keeps ACE-Step resident on the GPU: ~12 s load vs ~150 s with offload.

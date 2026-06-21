@@ -112,5 +112,4 @@ synesthesia/
     manager.py      # VRAM helpers
     __init__.py     # stream_song() / image_to_song() orchestrator
   requirements.txt
-  REPORT.md         # full project write-up (design, decisions, challenges)
 ```

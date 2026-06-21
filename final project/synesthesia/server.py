@@ -78,6 +78,8 @@ def generate(
                 sd_steps=sd_steps, seed=seed, log=logs.append,
             ):
                 payload: dict = {"kind": stage.kind, "note": stage.note}
+                if stage.inputs is not None:
+                    payload["inputs"] = stage.inputs
                 if stage.song is not None:
                     payload["song"] = dataclasses.asdict(stage.song)
                 if stage.audio_path:

@@ -82,6 +82,10 @@
   .prompt{font-family:ui-monospace,Consolas,monospace;font-size:12.5px;color:#3a3f5c;
     background:#f4f6fd;border:1px solid var(--line);border-radius:10px;padding:10px;margin-top:8px;white-space:pre-wrap}
   .lyrics{white-space:pre-wrap;line-height:1.6;margin-top:8px;font-size:14.5px}
+  .inbox{margin:8px 0;border:1px dashed var(--line);border-radius:10px;padding:8px 10px;background:#fbfcff}
+  .inbox .ilabel{font-size:11px;color:var(--muted);margin-bottom:4px}
+  .inbox pre{margin:0;white-space:pre-wrap;font-family:ui-monospace,Consolas,monospace;
+    font-size:12px;color:#3a3f5c;max-height:160px;overflow:auto}
   audio{width:100%;margin-top:10px}
   .cover-img{max-width:320px;width:100%;border-radius:12px;margin-top:10px;
     box-shadow:0 8px 28px #33336622}
@@ -194,8 +198,16 @@ function setBadge(stage, state){
   else { badge.textContent = "idle"; }
 }
 
-function renderVlm(song){
-  $("vlm-out").innerHTML = `
+function inbox(label, text){
+  return `<div class="inbox"><div class="ilabel">${esc(label)}</div><pre>${esc(text)}</pre></div>`;
+}
+
+function renderVlm(song, inputs){
+  const promptBox = (inputs && inputs.prompt)
+    ? `<details><summary>input: prompt sent to Qwen2.5-VL (+ the uploaded image)</summary>
+         <div class="prompt">${esc(inputs.prompt)}</div></details>`
+    : "";
+  $("vlm-out").innerHTML = promptBox + `
     <div class="title-line">${esc(song.title)}</div>
     <div class="meta">
       <span class="chip"><b>mood</b> ${esc(song.mood)}</span>
@@ -203,7 +215,7 @@ function renderVlm(song){
       <span class="chip"><b>tempo</b> ${esc(String(song.tempo_bpm))} bpm</span>
     </div>
     <div class="lyrics">${esc(song.lyrics)}</div>
-    <details><summary>style tags (to ACE-Step)</summary>
+    <details><summary>output: style tags</summary>
       <div class="prompt">${esc(song.tags)}</div></details>`;
 }
 
@@ -249,18 +261,23 @@ function handleEvent(ev){
     return;
   }
   if(ev.kind === "vlm"){
-    renderVlm(ev.song); setBadge("vlm","done"); setBadge("song","running");
+    renderVlm(ev.song, ev.inputs); setBadge("vlm","done"); setBadge("song","running");
   }
   else if(ev.kind === "song"){
-    $("song-out").innerHTML =
-      `<div class="chip"><b>song</b> ${ev.duration}s &middot; vocals + music</div>`
+    const inp = ev.inputs || {};
+    const received = inbox("input from Qwen2.5-VL  (tags + lyrics)",
+      `tags: ${inp.tags || ""}\n\nlyrics:\n${inp.lyrics || ""}`);
+    $("song-out").innerHTML = received
+      + `<div class="chip"><b>song</b> ${ev.duration}s &middot; vocals + music</div>`
       + `<audio controls preload="auto" src="${ev.audio_url}"></audio>`
       + `<br><a class="dl" href="${ev.audio_url}" download>Download song.wav</a>`;
     setBadge("song","done"); setBadge("cover","running");
   }
   else if(ev.kind === "cover"){
-    $("cover-out").innerHTML =
-      `<img class="cover-img" src="${ev.image_url}" alt="album cover" />`
+    const inp = ev.inputs || {};
+    const received = inbox("input from Qwen2.5-VL  (cover prompt)", inp.prompt || "");
+    $("cover-out").innerHTML = received
+      + `<img class="cover-img" src="${ev.image_url}" alt="album cover" />`
       + `<br><a class="dl" href="${ev.image_url}" download>Download cover.png</a>`;
     setBadge("cover","done");
   }

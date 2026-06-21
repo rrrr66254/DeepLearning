@@ -23,6 +23,7 @@ class Stage:
     song: Song | None = None
     audio_path: str | None = None
     image_path: str | None = None
+    inputs: dict | None = None      # what this model actually received
     note: str = ""
 
 
@@ -43,20 +44,29 @@ def stream_song(
     log("[1/3] Qwen2.5-VL: looking at image, writing lyrics + tags...")
     song = lyricist.write_song(image_path)
     log(f"      title={song.title!r} genre={song.genre!r}")
-    yield Stage(kind="vlm", song=song, note=vram_summary())
+    yield Stage(
+        kind="vlm", song=song, note=vram_summary(),
+        inputs={"image": os.path.basename(image_path), "prompt": lyricist.prompt_text()},
+    )
 
     log("[2/3] ACE-Step: singing the song...")
     song_wav = os.path.join(out_dir, "song.wav")
     singer.sing(song.tags, song.lyrics, song_wav, duration=duration,
                 infer_step=infer_step, seed=seed)
     log(f"      saved {song_wav}  {vram_summary()}")
-    yield Stage(kind="song", song=song, audio_path=song_wav, note=vram_summary())
+    yield Stage(
+        kind="song", song=song, audio_path=song_wav, note=vram_summary(),
+        inputs={"tags": song.tags, "lyrics": song.lyrics},
+    )
 
     log("[3/3] Stable Diffusion: painting the album cover...")
     cover_png = os.path.join(out_dir, "cover.png")
     cover.make_cover(song.cover_prompt, cover_png, steps=sd_steps)
     log(f"      saved {cover_png}  {vram_summary()}")
-    yield Stage(kind="cover", song=song, image_path=cover_png, note=vram_summary())
+    yield Stage(
+        kind="cover", song=song, image_path=cover_png, note=vram_summary(),
+        inputs={"prompt": cover.build_prompt(song.cover_prompt)},
+    )
 
 
 def image_to_song(image_path: str, out_dir: str, log=print) -> dict:

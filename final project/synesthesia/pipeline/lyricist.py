@@ -40,6 +40,11 @@ _INSTRUCTION = (
 )
 
 
+def prompt_text() -> str:
+    """The exact prompt sent to Qwen2.5-VL (shown in the UI)."""
+    return f"[system]\n{_SYSTEM}\n\n[user]\n{_INSTRUCTION}"
+
+
 @dataclass
 class Song:
     title: str = "Untitled"
@@ -99,6 +104,33 @@ def _salvage(text: str) -> dict:
     return data
 
 
+def _to_song(answer: str) -> Song:
+    data = _extract_json(answer)
+
+    def as_text(value, joiner=", ") -> str:
+        if isinstance(value, list):
+            return joiner.join(str(v) for v in value)
+        return str(value or "")
+
+    def as_int(value, default=90) -> int:
+        try:
+            return int(re.sub(r"[^0-9]", "", str(value)) or default)
+        except ValueError:
+            return default
+
+    return Song(
+        title=as_text(data.get("title", "Untitled")).strip() or "Untitled",
+        mood=as_text(data.get("mood")).strip(),
+        genre=as_text(data.get("genre")).strip(),
+        tempo_bpm=as_int(data.get("tempo_bpm")),
+        instruments=as_text(data.get("instruments")).strip(),
+        tags=as_text(data.get("tags")).strip(),
+        cover_prompt=as_text(data.get("cover_prompt")).strip(),
+        lyrics=as_text(data.get("lyrics"), joiner="\n").strip(),
+        raw=answer,
+    )
+
+
 def write_song(image_path: str) -> Song:
     from transformers import AutoProcessor, Qwen2_5_VLForConditionalGeneration
     from qwen_vl_utils import process_vision_info
@@ -130,43 +162,29 @@ def write_song(image_path: str) -> Song:
         return_tensors="pt",
     ).to(config.DEVICE)
 
-    with torch.inference_mode():
-        generated = model.generate(
-            **inputs,
-            max_new_tokens=config.VLM_MAX_NEW_TOKENS,
-            do_sample=True,
-            temperature=config.VLM_TEMPERATURE,
-        )
-    trimmed = [out[len(inp):] for inp, out in zip(inputs.input_ids, generated)]
-    answer = processor.batch_decode(
-        trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False
-    )[0]
+    # The VLM occasionally returns a response we can't fully parse (empty lyrics
+    # or cover prompt). Retry once at a lower temperature before giving up, so a
+    # live demo never ends up with a "la la la" song.
+    best: Song | None = None
+    for attempt in range(2):
+        temperature = config.VLM_TEMPERATURE if attempt == 0 else 0.4
+        with torch.inference_mode():
+            generated = model.generate(
+                **inputs,
+                max_new_tokens=config.VLM_MAX_NEW_TOKENS,
+                do_sample=True,
+                temperature=temperature,
+            )
+        trimmed = [out[len(inp):] for inp, out in zip(inputs.input_ids, generated)]
+        answer = processor.batch_decode(
+            trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False
+        )[0]
+        best = _to_song(answer)
+        if best.lyrics and best.cover_prompt:
+            break
 
     if config.FREE_AFTER_STAGE:
         model = model.cpu()
         free(model, processor)
 
-    data = _extract_json(answer)
-
-    def as_text(value, joiner=", ") -> str:
-        if isinstance(value, list):
-            return joiner.join(str(v) for v in value)
-        return str(value or "")
-
-    def as_int(value, default=90) -> int:
-        try:
-            return int(re.sub(r"[^0-9]", "", str(value)) or default)
-        except ValueError:
-            return default
-
-    return Song(
-        title=as_text(data.get("title", "Untitled")).strip() or "Untitled",
-        mood=as_text(data.get("mood")).strip(),
-        genre=as_text(data.get("genre")).strip(),
-        tempo_bpm=as_int(data.get("tempo_bpm")),
-        instruments=as_text(data.get("instruments")).strip(),
-        tags=as_text(data.get("tags")).strip(),
-        cover_prompt=as_text(data.get("cover_prompt")).strip(),
-        lyrics=as_text(data.get("lyrics"), joiner="\n").strip(),
-        raw=answer,
-    )
+    return best

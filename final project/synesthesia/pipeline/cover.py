@@ -7,13 +7,18 @@ import config
 from pipeline.manager import free
 
 
+def build_prompt(cover_prompt: str) -> str:
+    """The exact text prompt SDXL-Turbo receives (shown in the UI)."""
+    return (cover_prompt or "abstract album cover art, vivid colors") + \
+        ", album cover, highly detailed, artistic"
+
+
 def make_cover(cover_prompt: str, out_path: str, steps: int | None = None) -> str:
     from diffusers import AutoPipelineForText2Image
 
     steps = steps or config.SD_STEPS
     os.makedirs(os.path.dirname(out_path) or ".", exist_ok=True)
-    prompt = (cover_prompt or "abstract album cover art, vivid colors") + \
-        ", album cover, highly detailed, artistic"
+    prompt = build_prompt(cover_prompt)
 
     try:
         pipe = AutoPipelineForText2Image.from_pretrained(

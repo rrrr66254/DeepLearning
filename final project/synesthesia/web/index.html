@@ -68,6 +68,8 @@
   .stage .body{flex:1;min-width:0}
   .stage h3{margin:0 0 2px;font-size:16px;display:flex;align-items:center;gap:10px}
   .stage h3 small{color:var(--muted);font-weight:400;font-size:12px}
+  .stage h3 .size{font-size:11px;font-weight:700;color:var(--c,#667);background:#fff;
+    border:1px solid var(--c,var(--line));border-radius:20px;padding:2px 9px}
   .badge{margin-left:auto;font-size:11px;padding:3px 10px;border-radius:20px;
     background:#eef0f7;color:var(--muted)}
   .stage.active .badge{background:#6a4cff1a;color:#5a40d6}
@@ -137,7 +139,8 @@
   <div class="stage" id="s-vlm" style="--c:var(--vlm)">
     <div class="icon">1</div>
     <div class="body">
-      <h3>Qwen2.5-VL <small>vision + language &middot; sees the image, writes lyrics + tags</small>
+      <h3>Qwen2.5-VL <span class="size">~3.8B params</span>
+        <small>vision + language &middot; sees the image, writes lyrics + tags</small>
         <span class="badge">idle</span></h3>
       <div id="vlm-out"></div>
     </div>
@@ -147,7 +150,8 @@
   <div class="stage" id="s-song" style="--c:var(--song)">
     <div class="icon">2</div>
     <div class="body">
-      <h3>ACE-Step <small>music + voice &middot; sings the lyrics into a full song</small>
+      <h3>ACE-Step <span class="size">3.5B params</span>
+        <small>music + voice &middot; sings the lyrics into a full song</small>
         <span class="badge">idle</span></h3>
       <div id="song-out"></div>
     </div>
@@ -157,7 +161,8 @@
   <div class="stage" id="s-cover" style="--c:var(--cover)">
     <div class="icon">3</div>
     <div class="body">
-      <h3>Stable Diffusion <small>image generation &middot; paints the album cover</small>
+      <h3>Stable Diffusion <span class="size">~3.5B params (SDXL-Turbo)</span>
+        <small>image generation &middot; paints the album cover</small>
         <span class="badge">idle</span></h3>
       <div id="cover-out"></div>
     </div>

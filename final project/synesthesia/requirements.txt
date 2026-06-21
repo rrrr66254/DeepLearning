@@ -1,0 +1,17 @@
+# Synesthesia - main env (Qwen2.5-VL + Stable Diffusion)
+# NOTE 1: install a CUDA build of torch that matches your GPU first.
+#   developed on RTX 5070 Ti (Blackwell), torch 2.10.0+cu128
+#   pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu128
+# NOTE 2: ACE-Step (the singer) installs in a SEPARATE `ace` env — see README.
+torch>=2.5
+torchaudio>=2.5
+transformers>=4.49
+diffusers>=0.31
+accelerate>=0.34
+qwen-vl-utils>=0.0.8
+fastapi>=0.110
+uvicorn>=0.29
+python-multipart>=0.0.9
+soundfile>=0.12
+numpy>=1.26
+Pillow>=10.0

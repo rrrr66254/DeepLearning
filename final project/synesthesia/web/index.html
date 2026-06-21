@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Synesthesia - Image to Song</title>
+<style>
+  :root{
+    --bg:#f4f6fc; --panel:#ffffff; --line:#e2e6f2;
+    --txt:#1d2233; --muted:#6b7290; --accent:#6a4cff; --accent2:#e23d7e;
+    --vlm:#2f7fd1; --song:#10a06a; --cover:#e23d7e; --ok:#15a35b;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;font-family:'Segoe UI',system-ui,sans-serif;color:var(--txt);
+    background:
+      radial-gradient(1100px 520px at 12% -10%,#6a4cff14,transparent),
+      radial-gradient(900px 460px at 100% 0%,#e23d7e12,transparent),
+      var(--bg);
+    min-height:100vh;
+  }
+  .wrap{max-width:880px;margin:0 auto;padding:32px 20px 64px}
+  header h1{
+    font-size:34px;margin:0;letter-spacing:.3px;
+    background:linear-gradient(90deg,var(--vlm),var(--accent),var(--accent2));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  header p{color:var(--muted);margin:6px 0 0}
+  header .chain{margin-top:10px;font-size:13px;color:var(--muted)}
+  header .chain b{color:var(--txt)}
+
+  .card{
+    background:var(--panel);border:1px solid var(--line);border-radius:16px;
+    padding:18px;margin-top:18px;box-shadow:0 6px 24px #5566aa0f;
+  }
+  .uploader{border:1.5px dashed var(--line);border-radius:14px;padding:26px;
+    text-align:center;cursor:pointer;transition:.15s;background:#fafbff}
+  .uploader.drag{border-color:var(--accent);background:#6a4cff0d}
+  .uploader img{max-height:240px;max-width:100%;border-radius:12px;margin-top:6px}
+  .uploader .hint{color:var(--muted);font-size:14px}
+  .controls{display:flex;gap:14px;align-items:center;margin-top:16px;flex-wrap:wrap}
+  .btn{
+    border:0;border-radius:12px;padding:13px 26px;font-size:15px;font-weight:600;
+    color:#fff;cursor:pointer;background:linear-gradient(90deg,var(--accent),var(--accent2));
+    box-shadow:0 6px 16px #6a4cff33;
+  }
+  .btn:disabled{opacity:.45;cursor:not-allowed;box-shadow:none}
+
+  .stage{
+    display:flex;gap:14px;align-items:flex-start;border:1px solid var(--line);
+    border-radius:16px;padding:16px;margin-top:16px;background:var(--panel);
+    border-left:4px solid var(--c,var(--line));opacity:.6;transition:.25s;
+    box-shadow:0 4px 18px #5566aa0a;
+  }
+  .stage.active,.stage.done{opacity:1}
+  .stage .icon{
+    width:30px;height:30px;border-radius:50%;flex:0 0 auto;
+    display:flex;align-items:center;justify-content:center;
+    font-size:14px;font-weight:700;color:#fff;background:var(--c,#aab);
+  }
+  .stage .body{flex:1;min-width:0}
+  .stage h3{margin:0 0 2px;font-size:16px;display:flex;align-items:center;gap:10px}
+  .stage h3 small{color:var(--muted);font-weight:400;font-size:12px}
+  .badge{margin-left:auto;font-size:11px;padding:3px 10px;border-radius:20px;
+    background:#eef0f7;color:var(--muted)}
+  .stage.active .badge{background:#6a4cff1a;color:#5a40d6}
+  .stage.done .badge{background:#15a35b1a;color:var(--ok)}
+  .spin{width:13px;height:13px;border:2px solid #00000022;border-top-color:#5a40d6;
+    border-radius:50%;display:inline-block;animation:r .7s linear infinite}
+  @keyframes r{to{transform:rotate(360deg)}}
+
+  .meta{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
+  .chip{font-size:12px;padding:4px 10px;border-radius:8px;background:#f1f3fb;color:var(--txt)}
+  .chip b{color:var(--muted);font-weight:500}
+  .prompt{font-family:ui-monospace,Consolas,monospace;font-size:12.5px;color:#3a3f5c;
+    background:#f4f6fd;border:1px solid var(--line);border-radius:10px;padding:10px;margin-top:8px;white-space:pre-wrap}
+  .lyrics{white-space:pre-wrap;line-height:1.6;margin-top:8px;font-size:14.5px}
+  audio{width:100%;margin-top:10px}
+  .cover-img{max-width:320px;width:100%;border-radius:12px;margin-top:10px;
+    box-shadow:0 8px 28px #33336622}
+  .title-line{font-size:20px;font-weight:700;margin:2px 0 4px}
+  a.dl{display:inline-block;margin-top:10px;color:var(--txt);text-decoration:none;font-size:14px;
+    background:#f1f3fb;border:1px solid var(--line);padding:9px 16px;border-radius:10px}
+  a.dl:hover{background:#e8ebf7}
+  details{margin-top:8px}summary{cursor:pointer;color:var(--muted);font-size:13px}
+  pre.log{white-space:pre-wrap;font-size:12px;color:var(--muted);max-height:240px;overflow:auto;
+    background:#f4f6fd;border:1px solid var(--line);border-radius:10px;padding:10px;margin-top:6px}
+  .err{color:#d11a4a;white-space:pre-wrap;font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Synesthesia</h1>
+    <p>One image, three foundation models, one song.</p>
+    <div class="chain"><b>Qwen2.5-VL</b> sees &rarr; <b>ACE-Step</b> sings &rarr; <b>Stable Diffusion</b> paints the cover</div>
+  </header>
+
+  <div class="card">
+    <div id="uploader" class="uploader">
+      <div class="hint" id="uphint">Click or drop an image here</div>
+      <img id="preview" style="display:none" />
+    </div>
+    <input id="file" type="file" accept="image/*" hidden />
+    <div class="controls">
+      <button id="go" class="btn" disabled>Generate Song</button>
+    </div>
+  </div>
+
+  <!-- Stage 1: Qwen2.5-VL -->
+  <div class="stage" id="s-vlm" style="--c:var(--vlm)">
+    <div class="icon">1</div>
+    <div class="body">
+      <h3>Qwen2.5-VL <small>vision + language &middot; sees the image, writes lyrics + tags</small>
+        <span class="badge">idle</span></h3>
+      <div id="vlm-out"></div>
+    </div>
+  </div>
+
+  <!-- Stage 2: ACE-Step -->
+  <div class="stage" id="s-song" style="--c:var(--song)">
+    <div class="icon">2</div>
+    <div class="body">
+      <h3>ACE-Step <small>music + voice &middot; sings the lyrics into a full song</small>
+        <span class="badge">idle</span></h3>
+      <div id="song-out"></div>
+    </div>
+  </div>
+
+  <!-- Stage 3: Stable Diffusion -->
+  <div class="stage" id="s-cover" style="--c:var(--cover)">
+    <div class="icon">3</div>
+    <div class="body">
+      <h3>Stable Diffusion <small>image generation &middot; paints the album cover</small>
+        <span class="badge">idle</span></h3>
+      <div id="cover-out"></div>
+    </div>
+  </div>
+
+  <details class="card"><summary>Pipeline log</summary><pre class="log" id="log"></pre></details>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => (s||"").replace(/</g,"&lt;");
+let pickedFile = null;
+
+const uploader = $("uploader"), fileInput = $("file");
+uploader.onclick = () => fileInput.click();
+fileInput.onchange = e => setFile(e.target.files[0]);
+uploader.addEventListener("dragover", e => { e.preventDefault(); uploader.classList.add("drag"); });
+uploader.addEventListener("dragleave", () => uploader.classList.remove("drag"));
+uploader.addEventListener("drop", e => {
+  e.preventDefault(); uploader.classList.remove("drag");
+  if (e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]);
+});
+
+function setFile(f){
+  if(!f) return;
+  pickedFile = f;
+  $("preview").src = URL.createObjectURL(f);
+  $("preview").style.display = "inline-block";
+  $("uphint").textContent = f.name;
+  $("go").disabled = false;
+}
+
+function setBadge(stage, state){
+  const el = $("s-"+stage), badge = el.querySelector(".badge");
+  el.classList.remove("active","done");
+  if(state==="running"){ el.classList.add("active"); badge.innerHTML = '<span class="spin"></span> running'; }
+  else if(state==="done"){ el.classList.add("done"); badge.textContent = "done"; }
+  else { badge.textContent = "idle"; }
+}
+
+function renderVlm(song){
+  $("vlm-out").innerHTML = `
+    <div class="title-line">${esc(song.title)}</div>
+    <div class="meta">
+      <span class="chip"><b>mood</b> ${esc(song.mood)}</span>
+      <span class="chip"><b>genre</b> ${esc(song.genre)}</span>
+      <span class="chip"><b>tempo</b> ${esc(String(song.tempo_bpm))} bpm</span>
+    </div>
+    <div class="lyrics">${esc(song.lyrics)}</div>
+    <details><summary>style tags (to ACE-Step)</summary>
+      <div class="prompt">${esc(song.tags)}</div></details>`;
+}
+
+async function generate(){
+  if(!pickedFile) return;
+  $("go").disabled = true;
+  ["vlm","song","cover"].forEach(s => { setBadge(s,"idle"); $(s+"-out").innerHTML=""; });
+  setBadge("vlm","running");
+
+  const fd = new FormData();
+  fd.append("image", pickedFile);
+
+  let resp;
+  try { resp = await fetch("/generate", { method:"POST", body:fd }); }
+  catch(e){ $("log").textContent = "request failed: "+e; $("go").disabled=false; return; }
+
+  const reader = resp.body.getReader();
+  const dec = new TextDecoder();
+  let buf = "";
+  while(true){
+    const {value, done} = await reader.read();
+    if(done) break;
+    buf += dec.decode(value, {stream:true});
+    let nl;
+    while((nl = buf.indexOf("\n")) >= 0){
+      const line = buf.slice(0, nl).trim();
+      buf = buf.slice(nl+1);
+      if(line) handleEvent(JSON.parse(line));
+    }
+  }
+  $("go").disabled = false;
+}
+
+function handleEvent(ev){
+  if(ev.log) $("log").textContent = ev.log;
+  if(ev.kind === "error"){
+    $("song-out").innerHTML = `<div class="err">${esc(ev.message)}</div>`;
+    ["vlm","song","cover"].forEach(s => setBadge(s,"idle"));
+    return;
+  }
+  if(ev.kind === "vlm"){
+    renderVlm(ev.song); setBadge("vlm","done"); setBadge("song","running");
+  }
+  else if(ev.kind === "song"){
+    $("song-out").innerHTML =
+      `<div class="chip"><b>song</b> ${ev.duration}s &middot; vocals + music</div>`
+      + `<audio controls preload="auto" src="${ev.audio_url}"></audio>`
+      + `<br><a class="dl" href="${ev.audio_url}" download>Download song.wav</a>`;
+    setBadge("song","done"); setBadge("cover","running");
+  }
+  else if(ev.kind === "cover"){
+    $("cover-out").innerHTML =
+      `<img class="cover-img" src="${ev.image_url}" alt="album cover" />`
+      + `<br><a class="dl" href="${ev.image_url}" download>Download cover.png</a>`;
+    setBadge("cover","done");
+  }
+}
+
+$("go").onclick = generate;
+</script>
+</body>
+</html>

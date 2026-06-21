@@ -49,7 +49,7 @@
   .settings label{display:flex;flex-direction:column;gap:5px;font-size:13px;color:var(--muted)}
   .settings label b{color:var(--txt)}
   .settings input[type=range]{width:100%;accent-color:var(--accent)}
-  .settings .seed{flex-direction:row;align-items:center;gap:8px}
+  .settings .rec{font-size:11px;color:#9aa0c0}
   .settings .seed input{width:90px;padding:5px 8px;border:1px solid var(--line);border-radius:8px}
   #estimate{font-size:12.5px}
 
@@ -111,13 +111,17 @@
     <input id="file" type="file" accept="image/*" hidden />
     <div class="settings">
       <label>Song length <b><span id="durVal">90</span>s</b>
-        <input type="range" id="dur" min="20" max="180" step="5" value="90"></label>
+        <input type="range" id="dur" min="20" max="180" step="5" value="90">
+        <small class="rec">recommended 60-120s (long enough for full lyrics)</small></label>
       <label>Singing quality (steps) <b><span id="stepVal">27</span></b>
-        <input type="range" id="step" min="10" max="60" step="1" value="27"></label>
+        <input type="range" id="step" min="10" max="60" step="1" value="27">
+        <small class="rec">recommended 27-40 (higher = better, slower)</small></label>
       <label>Cover quality (steps) <b><span id="sdVal">3</span></b>
-        <input type="range" id="sd" min="1" max="8" step="1" value="3"></label>
+        <input type="range" id="sd" min="1" max="8" step="1" value="3">
+        <small class="rec">recommended 2-4 (SDXL-Turbo is a few-step model)</small></label>
       <label class="seed">Seed
-        <input type="number" id="seed" value="42" min="0" max="999999"></label>
+        <input type="number" id="seed" value="42" min="0" max="999999">
+        <small class="rec">any number; change it for a different song</small></label>
     </div>
     <div class="controls">
       <button id="go" class="btn" disabled>Generate Song</button>

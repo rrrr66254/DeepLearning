@@ -36,9 +36,10 @@ VLM_TEMPERATURE = 0.7
 # --- (2) Singer: ACE-Step (runs in the isolated `ace` conda env) ------------
 # ACE-Step pins transformers==4.50, so it lives in its own env and is called
 # as a subprocess. The model weights download from the HuggingFace Hub.
-ACE_ENV_PYTHON = os.environ.get(
-    "ACE_ENV_PYTHON", r"C:/Users/USER/anaconda3/envs/ace/python.exe"
-)
+# By default the env is resolved by name via `conda run -n ace` (portable, no
+# machine-specific path). Set ACE_ENV_PYTHON to a python.exe to override.
+ACE_ENV_NAME = os.environ.get("ACE_ENV_NAME", "ace")
+ACE_ENV_PYTHON = os.environ.get("ACE_ENV_PYTHON", "")
 ACE_SINGER_SCRIPT = os.path.join(HERE, "ace_singer.py")
 ACE_DURATION_S = 25
 ACE_INFER_STEP = 27

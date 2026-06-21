@@ -8,10 +8,25 @@ passed via a temp file to avoid shell-quoting issues; the song is written to
 from __future__ import annotations
 
 import os
+import shutil
 import subprocess
 import tempfile
 
 import config
+
+
+def _ace_launcher() -> list[str]:
+    """How to launch python in the ACE-Step env.
+
+    Prefer an explicit python.exe if ACE_ENV_PYTHON points to one; otherwise
+    resolve the env by name via `conda run -n <ACE_ENV_NAME>` so the project is
+    portable across machines without editing any path.
+    """
+    py = config.ACE_ENV_PYTHON
+    if py and os.path.exists(py):
+        return [py]
+    conda = shutil.which("conda") or "conda"
+    return [conda, "run", "--no-capture-output", "-n", config.ACE_ENV_NAME, "python"]
 
 
 def sing(tags: str, lyrics: str, out_path: str, duration: int | None = None) -> str:
@@ -23,7 +38,7 @@ def sing(tags: str, lyrics: str, out_path: str, duration: int | None = None) -> 
         fh.write(lyrics or "[verse]\nla la la")
 
     cmd = [
-        config.ACE_ENV_PYTHON,
+        *_ace_launcher(),
         config.ACE_SINGER_SCRIPT,
         "--prompt", tags or "pop, emotional, soft vocals",
         "--lyrics-file", lyrics_file,

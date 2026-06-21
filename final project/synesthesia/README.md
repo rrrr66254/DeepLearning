@@ -57,8 +57,9 @@ PYTHONUTF8=1 pip install git+https://github.com/ace-step/ACE-Step.git
 ```
 
 Notes:
-- Set `ACE_ENV_PYTHON` in `config.py` (or the env var of the same name) to the
-  `python.exe` of the `ace` env if it differs from the default path.
+- The singer env is resolved by **name** (`conda run -n ace`), so no path editing
+  is needed as long as the env is called `ace`. To use a different name set the
+  `ACE_ENV_NAME` env var; to point at a specific interpreter set `ACE_ENV_PYTHON`.
 - `ace_singer.py` patches `torchaudio.save` to use soundfile, so you do **not**
   need TorchCodec (which has no Windows wheel).
 

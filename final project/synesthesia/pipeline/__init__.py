@@ -13,7 +13,7 @@ from typing import Iterator
 
 from pipeline import cover, lyricist, singer
 from pipeline.lyricist import Song
-from pipeline.manager import vram_summary
+from pipeline.manager import free, vram_summary
 
 
 @dataclass
@@ -39,6 +39,7 @@ def stream_song(
 ) -> Iterator[Stage]:
     """Run the pipeline, yielding a Stage after each model finishes."""
     os.makedirs(out_dir, exist_ok=True)
+    free()  # clear any residual VRAM from a previous (possibly failed) run
     log(f"[0/3] start  {vram_summary()}")
 
     log("[1/3] Qwen2.5-VL: looking at image, writing lyrics + tags...")

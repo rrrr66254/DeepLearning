@@ -30,17 +30,21 @@ def make_cover(cover_prompt: str, out_path: str, steps: int | None = None) -> st
         )
     pipe = pipe.to(config.DEVICE)
 
-    image = pipe(
-        prompt=prompt,
-        num_inference_steps=steps,
-        guidance_scale=config.SD_GUIDANCE,
-        height=config.SD_SIZE,
-        width=config.SD_SIZE,
-    ).images[0]
-    image.save(out_path)
-
-    if config.FREE_AFTER_STAGE:
-        pipe = pipe.to("cpu")
+    try:
+        image = pipe(
+            prompt=prompt,
+            num_inference_steps=steps,
+            guidance_scale=config.SD_GUIDANCE,
+            height=config.SD_SIZE,
+            width=config.SD_SIZE,
+        ).images[0]
+        image.save(out_path)
+    finally:
+        # Free even on error (e.g. OOM) so memory doesn't leak into the next run.
+        try:
+            pipe = pipe.to("cpu")
+        except Exception:
+            pass
         free(pipe)
 
     return out_path

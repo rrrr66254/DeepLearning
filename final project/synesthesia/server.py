@@ -12,6 +12,7 @@ import argparse
 import dataclasses
 import json
 import os
+import threading
 import uuid
 
 import soundfile as sf
@@ -22,6 +23,10 @@ from fastapi.staticfiles import StaticFiles
 
 import config
 from pipeline import stream_song
+
+# Only one generation runs at a time, so two requests can't both load models
+# onto the GPU and run it out of memory.
+_gen_lock = threading.Lock()
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 WEB_DIR = os.path.join(HERE, "web")
@@ -72,30 +77,31 @@ def generate(
 
     def emit():
         logs: list[str] = []
-        try:
-            for stage in stream_song(
-                img_path, session_dir, duration=duration, infer_step=infer_step,
-                sd_steps=sd_steps, seed=seed, log=logs.append,
-            ):
-                payload: dict = {"kind": stage.kind, "note": stage.note}
-                if stage.inputs is not None:
-                    payload["inputs"] = stage.inputs
-                if stage.song is not None:
-                    payload["song"] = dataclasses.asdict(stage.song)
-                if stage.audio_path:
-                    name = os.path.basename(stage.audio_path)
-                    payload["audio_url"] = f"/outputs/{session}/{name}"
-                    payload["duration"] = _audio_duration(stage.audio_path)
-                if stage.image_path:
-                    name = os.path.basename(stage.image_path)
-                    payload["image_url"] = f"/outputs/{session}/{name}"
-                payload["log"] = "\n".join(logs)
-                yield json.dumps(payload, ensure_ascii=False) + "\n"
-        except Exception as exc:  # surface errors to the browser
-            import traceback
-            yield json.dumps(
-                {"kind": "error", "message": str(exc), "log": traceback.format_exc()}
-            ) + "\n"
+        with _gen_lock:
+            try:
+                for stage in stream_song(
+                    img_path, session_dir, duration=duration, infer_step=infer_step,
+                    sd_steps=sd_steps, seed=seed, log=logs.append,
+                ):
+                    payload: dict = {"kind": stage.kind, "note": stage.note}
+                    if stage.inputs is not None:
+                        payload["inputs"] = stage.inputs
+                    if stage.song is not None:
+                        payload["song"] = dataclasses.asdict(stage.song)
+                    if stage.audio_path:
+                        name = os.path.basename(stage.audio_path)
+                        payload["audio_url"] = f"/outputs/{session}/{name}"
+                        payload["duration"] = _audio_duration(stage.audio_path)
+                    if stage.image_path:
+                        name = os.path.basename(stage.image_path)
+                        payload["image_url"] = f"/outputs/{session}/{name}"
+                    payload["log"] = "\n".join(logs)
+                    yield json.dumps(payload, ensure_ascii=False) + "\n"
+            except Exception as exc:  # surface errors to the browser
+                import traceback
+                yield json.dumps(
+                    {"kind": "error", "message": str(exc), "log": traceback.format_exc()}
+                ) + "\n"
 
     return StreamingResponse(emit(), media_type="application/x-ndjson")
 

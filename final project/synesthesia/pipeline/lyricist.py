@@ -166,25 +166,29 @@ def write_song(image_path: str) -> Song:
     # or cover prompt). Retry once at a lower temperature before giving up, so a
     # live demo never ends up with a "la la la" song.
     best: Song | None = None
-    for attempt in range(2):
-        temperature = config.VLM_TEMPERATURE if attempt == 0 else 0.4
-        with torch.inference_mode():
-            generated = model.generate(
-                **inputs,
-                max_new_tokens=config.VLM_MAX_NEW_TOKENS,
-                do_sample=True,
-                temperature=temperature,
-            )
-        trimmed = [out[len(inp):] for inp, out in zip(inputs.input_ids, generated)]
-        answer = processor.batch_decode(
-            trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False
-        )[0]
-        best = _to_song(answer)
-        if best.lyrics and best.cover_prompt:
-            break
-
-    if config.FREE_AFTER_STAGE:
-        model = model.cpu()
+    try:
+        for attempt in range(2):
+            temperature = config.VLM_TEMPERATURE if attempt == 0 else 0.4
+            with torch.inference_mode():
+                generated = model.generate(
+                    **inputs,
+                    max_new_tokens=config.VLM_MAX_NEW_TOKENS,
+                    do_sample=True,
+                    temperature=temperature,
+                )
+            trimmed = [out[len(inp):] for inp, out in zip(inputs.input_ids, generated)]
+            answer = processor.batch_decode(
+                trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False
+            )[0]
+            best = _to_song(answer)
+            if best.lyrics and best.cover_prompt:
+                break
+    finally:
+        # Free even on error (e.g. OOM) so memory doesn't leak into the next run.
+        try:
+            model = model.cpu()
+        except Exception:
+            pass
         free(model, processor)
 
     return best
